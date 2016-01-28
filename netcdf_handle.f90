@@ -24,10 +24,21 @@ MODULE netcdf_handle
     PROCEDURE, PRIVATE :: write1D => nc_write1D
     PROCEDURE, PRIVATE :: write2D => nc_write2D
     GENERIC,PUBLIC :: nc_write => write1D, write2D
+
+    FINAL :: destructor !requires full Fortran2003 support by compiler
   END TYPE
 
 CONTAINS
-  
+
+  SUBROUTINE destructor(this)
+    ! close open nc files before object gets destroyed
+    IMPLICIT NONE
+    TYPE(nc_file) :: this
+    INTEGER :: nc_stat
+
+    nc_stat = nf90_close(this%ncid)
+  END SUBROUTINE destructor
+ 
   INTEGER FUNCTION nc_create(this, file_name)
     ! Create new netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
