@@ -20,24 +20,25 @@ MODULE netcdf_handle
     PROCEDURE nc_close
     PROCEDURE, PRIVATE :: read1D => nc_read1D
     PROCEDURE, PRIVATE :: read2D => nc_read2D
-    GENERIC, PUBLIC :: nc_read => read1D, read2D
+    PROCEDURE, PRIVATE :: read3D => nc_read3D
+    GENERIC, PUBLIC :: nc_read => read1D, read2D, read3D
     PROCEDURE, PRIVATE :: write1D => nc_write1D
     PROCEDURE, PRIVATE :: write2D => nc_write2D
     GENERIC,PUBLIC :: nc_write => write1D, write2D
 
-    FINAL :: destructor !requires full Fortran2003 support by compiler
+!    FINAL :: destructor !requires full Fortran2003 support by compiler
   END TYPE
 
 CONTAINS
 
-  SUBROUTINE destructor(this)
-    ! close open nc files before object gets destroyed
-    IMPLICIT NONE
-    TYPE(nc_file) :: this
-    INTEGER :: nc_stat
-
-    nc_stat = nf90_close(this%ncid)
-  END SUBROUTINE destructor
+!  SUBROUTINE destructor(this)
+!    ! close open nc files before object gets destroyed
+!    IMPLICIT NONE
+!    TYPE(nc_file) :: this
+!    INTEGER :: nc_stat
+!
+!    nc_stat = nf90_close(this%ncid)
+!  END SUBROUTINE destructor
  
   INTEGER FUNCTION nc_create(this, file_name)
     ! Create new netcdf-file and overwrite in case file already exists
@@ -86,7 +87,6 @@ CONTAINS
 
     nc_enddef = nf90_enddef(this%ncid)
   END FUNCTION nc_enddef
-
 
   INTEGER FUNCTION nc_open(this,file_name)
     ! Open existing netcdf-file in read-only mode
@@ -137,6 +137,27 @@ CONTAINS
     nc_stat = nf90_get_var(this%ncid, var_id, data_out, start, count, stride, map)
   END SUBROUTINE nc_read2D
 
+  SUBROUTINE nc_read3D(this, var_name, data_out, nc_stat, start, count, stride, map)
+    ! Read variable data from file
+    ! input values: var_name (char*) = name of variable
+    !               data (real(:,:,:)) = the array containing data of the variable
+    !               nc_stat (int) = netcdf error code
+    IMPLICIT NONE
+    CLASS(nc_file) :: this
+    CHARACTER (len = *) :: var_name
+    !TODO Figure out some template like way to allow generic type for data
+    REAL, DIMENSION(:,:,:) :: data_out
+    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: var_id
+    INTEGER, OPTIONAL, DIMENSION(:) :: start, count, stride, map
+
+    ! Get the varid of the data variable, based on its name.
+    nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    nc_stat = nf90_get_var(this%ncid, var_id, data_out, start, count, stride, map)
+
+  END SUBROUTINE nc_read3D
+
+
   SUBROUTINE nc_write1D(this, var_name, data_in, nc_stat, start, count, stride, map)
     ! Write variable data to file
     ! input values: var_name (char*) = name of variable
@@ -174,8 +195,29 @@ CONTAINS
 
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
-    nc_stat = nf90_put_var(this%ncid, var_id, data, start, count, stride, map)
+    nc_stat = nf90_put_var(this%ncid, var_id, data_in, start, count, stride, map)
   END SUBROUTINE nc_write2D
+
+  SUBROUTINE nc_write3D(this, var_name, data_in, nc_stat, start, count, stride, map)
+    ! Write variable data to file
+    ! input values: var_name (char*) = name of variable
+    !               data (real(:,:,:)) = the array containing data of the variable
+    !               nc_stat (int) = netcdf error code
+    IMPLICIT NONE
+    CLASS(nc_file) :: this
+    CHARACTER (len = *) :: var_name
+
+    !TODO Figure out some template like way to allow generic type for data
+    REAL, DIMENSION(:,:,:) :: data_in
+    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: var_id
+    INTEGER, OPTIONAL, DIMENSION(:) :: start, count, stride, map
+
+    ! Get the varid of the data variable, based on its name.
+    nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    nc_stat = nf90_put_var(this%ncid, var_id, data_in, start, count, stride, map)
+  END SUBROUTINE nc_write3D
+
 
   INTEGER FUNCTION nc_close(this)
   ! Close the file, freeing all resources
