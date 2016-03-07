@@ -12,16 +12,36 @@ MODULE netcdf_handle
     INTEGER :: ncid
 
   CONTAINS
-    PROCEDURE nc_create
+! file creation
+    PROCEDURE, PRIVATE :: create_serial => nc_create_serial
+#ifdef parallel
+    PROCEDURE, PRIVATE :: create_par => nc_create_par
+    GENERIC, PUBLIC :: nc_create => create_serial, create_par
+#else
+    GENERIC, PUBLIC :: nc_create => create_serial
+#endif
+! definitions
     PROCEDURE nc_defdim
     PROCEDURE nc_defvar
     PROCEDURE nc_enddef
-    PROCEDURE nc_open
+! var access
+    PROCEDURE nc_var_par_access
+! file opening
+    PROCEDURE, PRIVATE :: open_serial => nc_open_serial
+#ifdef parallel
+    PROCEDURE, PRIVATE :: open_par => nc_open_par
+    GENERIC, PUBLIC :: nc_open => open_serial, open_par
+#else
+    GENERIC, PUBLIC :: nc_open => open_serial
+#endif
+! file closing
     PROCEDURE nc_close
+! variable read
     PROCEDURE, PRIVATE :: read1D => nc_read1D
     PROCEDURE, PRIVATE :: read2D => nc_read2D
     PROCEDURE, PRIVATE :: read3D => nc_read3D
     GENERIC, PUBLIC :: nc_read => read1D, read2D, read3D
+!variable write
     PROCEDURE, PRIVATE :: write1D => nc_write1D
     PROCEDURE, PRIVATE :: write2D => nc_write2D
     GENERIC,PUBLIC :: nc_write => write1D, write2D
@@ -40,7 +60,7 @@ CONTAINS
 !    nc_stat = nf90_close(this%ncid)
 !  END SUBROUTINE destructor
  
-  INTEGER FUNCTION nc_create(this, file_name)
+  INTEGER FUNCTION nc_create_serial(this, file_name)
     ! Create new netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
     ! return value: netcdf error code
@@ -48,8 +68,27 @@ CONTAINS
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
 
-    nc_create = nf90_create(file_name, NF90_CLOBBER, this%ncid)
-  END FUNCTION nc_create
+    nc_create_serial = nf90_create(file_name, NF90_CLOBBER, this%ncid)
+  END FUNCTION nc_create_serial
+
+#ifdef parallel
+  INTEGER FUNCTION nc_create_par(this, file_name, cmode, mpi_comm, mpi_info)
+    ! Create new parallel netcdf-file and overwrite in case file already exists
+    ! input value: file_name(char*) = name of the file
+    ! return value: netcdf error code
+    IMPLICIT NONE
+    CLASS(nc_file) :: this
+    CHARACTER (len = *) :: file_name
+    INTEGER, INTENT(in) :: cmode
+    INTEGER, INTENT(in) :: mpi_comm
+    INTEGER, INTENT(in) :: mpi_info
+    INTEGER, INTENT(out) :: nc_stat
+
+    nc_stat = nf90_create_par(file_name, cmode, mpi_comm, mpi_info, this%ncid)
+    !TODO Handle error
+    !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+  END FUNCTION nc_create_par
+#endif
 
   INTEGER FUNCTION nc_defdim(this, dim_name, dim_size)
     ! Define new dimension
@@ -88,7 +127,7 @@ CONTAINS
     nc_enddef = nf90_enddef(this%ncid)
   END FUNCTION nc_enddef
 
-  INTEGER FUNCTION nc_open(this,file_name)
+  INTEGER FUNCTION nc_open_serial(this,file_name)
     ! Open existing netcdf-file in read-only mode
     ! input value: file_name (char*) = name of file to be opened
     ! return value: netcdf error code
@@ -96,8 +135,42 @@ CONTAINS
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
 
-    nc_open = nf90_open(file_name, NF90_NOWRITE, this%ncid)
-  END FUNCTION nc_open
+    nc_open_serial = nf90_open(file_name, NF90_NOWRITE, this%ncid)
+  END FUNCTION nc_open_serial
+
+#ifdef parallel
+  INTEGER FUNCTION nc_open_par(this, file_name, cmode, mpi_comm, mpi_info)
+    ! Open existing parallel netcdf-file
+    ! input value: file_name (char*) = name of file to be opened
+    ! return value: netcdf error code
+    IMPLICIT NONE
+    CLASS(nc_file) :: this
+    CHARACTER (len = *) :: file_name
+    INTEGER, INTENT(in) :: cmode
+    INTEGER, INTENT(in) :: mpi_comm
+    INTEGER, INTENT(in) :: mpi_info
+    INTEGER, INTENT(out) :: nc_stat
+
+    nc_stat = nf90_open_par(file_name, cmode, mpi_comm, &
+              mpi_info, this%ncid)
+    !TODO Handle error
+    !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+
+  INTEGER FUNCTION nc_var_par_access(this, var_name, par_access)
+    ! The function NF90_VAR_PAR_ACCESS changes whether read/write operations 
+    ! on a parallel file system are performed collectively (the default) or independently on the variable
+    IMPLICIT NONE
+    CLASS(nc_file) :: this
+    CHARACTER (len = *) :: var_name
+    INTEGER :: var_id
+    INTEGER, INTENT(in) :: par_access
+    INTEGER, INTENT(out) :: nc_stat
+
+    nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    nc_stat = nf90_var_par_access(this%ncid, varid, par_access)
+    !TODO Handle error
+    !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+#endif
 
   SUBROUTINE nc_read1D(this, var_name, data_out, nc_stat, start, count, stride, map)
     ! Read variable data from file
