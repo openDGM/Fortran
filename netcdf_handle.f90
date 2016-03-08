@@ -14,7 +14,7 @@ MODULE netcdf_handle
   CONTAINS
 ! file creation
     PROCEDURE, PRIVATE :: create_serial => nc_create_serial
-#ifdef parallel
+#if defined ( parallel )
     PROCEDURE, PRIVATE :: create_par => nc_create_par
     GENERIC, PUBLIC :: nc_create => create_serial, create_par
 #else
@@ -28,7 +28,7 @@ MODULE netcdf_handle
     PROCEDURE nc_var_par_access
 ! file opening
     PROCEDURE, PRIVATE :: open_serial => nc_open_serial
-#ifdef parallel
+#if defined ( parallel )
     PROCEDURE, PRIVATE :: open_par => nc_open_par
     GENERIC, PUBLIC :: nc_open => open_serial, open_par
 #else
@@ -71,7 +71,7 @@ CONTAINS
     nc_create_serial = nf90_create(file_name, NF90_CLOBBER, this%ncid)
   END FUNCTION nc_create_serial
 
-#ifdef parallel
+#if defined ( parallel )
   INTEGER FUNCTION nc_create_par(this, file_name, cmode, mpi_comm, mpi_info)
     ! Create new parallel netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
@@ -99,8 +99,9 @@ CONTAINS
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: dim_name
     INTEGER :: dim_size, dim_id
+    INTEGER, INTENT(out) :: nc_stat
 
-    nc_defdim = nf90_def_dim(this%ncid,dim_name, dim_size, dim_id)
+    nc_stat = nf90_def_dim(this%ncid,dim_name, dim_size, dim_id)
   END FUNCTION nc_defdim
 
   INTEGER FUNCTION nc_defvar(this, var_name, NCTYPE, dim_ids)
@@ -114,8 +115,9 @@ CONTAINS
     CHARACTER (len = *) :: var_name
     INTEGER :: NCTYPE, var_id
     INTEGER, DIMENSION(:) :: dim_ids
+    INTEGER, INTENT(out) :: nc_stat
 
-    nc_defvar = nf90_def_var(this%ncid, var_name, NCTYPE, dim_ids, var_id)
+    nc_stat = nf90_def_var(this%ncid, var_name, NCTYPE, dim_ids, var_id)
   END FUNCTION nc_defvar
 
   INTEGER FUNCTION nc_enddef(this)
@@ -123,8 +125,9 @@ CONTAINS
     ! return value: netcdf error code
     IMPLICIT NONE
     CLASS(nc_file) :: this
+    INTEGER, INTENT(out) :: nc_stat
 
-    nc_enddef = nf90_enddef(this%ncid)
+    nc_stat = nf90_enddef(this%ncid)
   END FUNCTION nc_enddef
 
   INTEGER FUNCTION nc_open_serial(this,file_name)
@@ -134,11 +137,12 @@ CONTAINS
     IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
+    INTEGER, INTENT(out) :: nc_stat
 
-    nc_open_serial = nf90_open(file_name, NF90_NOWRITE, this%ncid)
+    nc_stat = nf90_open(file_name, NF90_NOWRITE, this%ncid)
   END FUNCTION nc_open_serial
 
-#ifdef parallel
+#if defined ( parallel )
   INTEGER FUNCTION nc_open_par(this, file_name, cmode, mpi_comm, mpi_info)
     ! Open existing parallel netcdf-file
     ! input value: file_name (char*) = name of file to be opened
