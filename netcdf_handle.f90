@@ -14,7 +14,7 @@ MODULE netcdf_handle
   CONTAINS
 ! file creation
     PROCEDURE, PRIVATE :: create_serial => nc_create_serial
-#if defined ( parallel )
+#if defined( parallel )
     PROCEDURE, PRIVATE :: create_par => nc_create_par
     GENERIC, PUBLIC :: nc_create => create_serial, create_par
 #else
@@ -25,10 +25,12 @@ MODULE netcdf_handle
     PROCEDURE nc_defvar
     PROCEDURE nc_enddef
 ! var access
+#if defined( parallel )
     PROCEDURE nc_var_par_access
+#endif
 ! file opening
     PROCEDURE, PRIVATE :: open_serial => nc_open_serial
-#if defined ( parallel )
+#if defined( parallel )
     PROCEDURE, PRIVATE :: open_par => nc_open_par
     GENERIC, PUBLIC :: nc_open => open_serial, open_par
 #else
@@ -64,25 +66,25 @@ CONTAINS
     ! Create new netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
 
     nc_create_serial = nf90_create(file_name, NF90_CLOBBER, this%ncid)
   END FUNCTION nc_create_serial
 
-#if defined ( parallel )
+#if defined( parallel )
   INTEGER FUNCTION nc_create_par(this, file_name, cmode, mpi_comm, mpi_info)
     ! Create new parallel netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
     INTEGER, INTENT(in) :: cmode
     INTEGER, INTENT(in) :: mpi_comm
     INTEGER, INTENT(in) :: mpi_info
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_create_par(file_name, cmode, mpi_comm, mpi_info, this%ncid)
     !TODO Handle error
@@ -95,11 +97,11 @@ CONTAINS
     ! input values: dim_name(char*) = name of the dimension
     !               dim_size(int) = size of the dimension 
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: dim_name
     INTEGER :: dim_size, dim_id
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_def_dim(this%ncid,dim_name, dim_size, dim_id)
   END FUNCTION nc_defdim
@@ -110,12 +112,12 @@ CONTAINS
     !               NCTYPE = netcdf-type of the variable (e.g. NF90_INT)
     !               dim_ids (int(:)) = array containing dimension id's bound to newly defined variable
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     INTEGER :: NCTYPE, var_id
     INTEGER, DIMENSION(:) :: dim_ids
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_def_var(this%ncid, var_name, NCTYPE, dim_ids, var_id)
   END FUNCTION nc_defvar
@@ -123,9 +125,9 @@ CONTAINS
   INTEGER FUNCTION nc_enddef(this)
     ! End definitions, leave define mode
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_enddef(this%ncid)
   END FUNCTION nc_enddef
@@ -134,46 +136,48 @@ CONTAINS
     ! Open existing netcdf-file in read-only mode
     ! input value: file_name (char*) = name of file to be opened
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_open(file_name, NF90_NOWRITE, this%ncid)
   END FUNCTION nc_open_serial
 
-#if defined ( parallel )
+#if defined( parallel )
   INTEGER FUNCTION nc_open_par(this, file_name, cmode, mpi_comm, mpi_info)
     ! Open existing parallel netcdf-file
     ! input value: file_name (char*) = name of file to be opened
     ! return value: netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
     INTEGER, INTENT(in) :: cmode
     INTEGER, INTENT(in) :: mpi_comm
     INTEGER, INTENT(in) :: mpi_info
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_open_par(file_name, cmode, mpi_comm, &
               mpi_info, this%ncid)
     !TODO Handle error
     !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+  END FUNCTION nc_open_par
 
   INTEGER FUNCTION nc_var_par_access(this, var_name, par_access)
     ! The function NF90_VAR_PAR_ACCESS changes whether read/write operations 
     ! on a parallel file system are performed collectively (the default) or independently on the variable
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     INTEGER :: var_id
     INTEGER, INTENT(in) :: par_access
-    INTEGER, INTENT(out) :: nc_stat
+    INTEGER :: nc_stat
 
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
-    nc_stat = nf90_var_par_access(this%ncid, varid, par_access)
+    nc_stat = nf90_var_par_access(this%ncid, var_id, par_access)
     !TODO Handle error
     !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+  END FUNCTION nc_var_par_access
 #endif
 
   SUBROUTINE nc_read1D(this, var_name, data_out, nc_stat, start, count, stride, map)
@@ -181,7 +185,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data_out (real(:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow different type and dimension for data
@@ -200,7 +204,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow generic type for data
@@ -219,7 +223,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow generic type for data
@@ -240,7 +244,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data_in (real(:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow generic type for data
@@ -260,7 +264,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
 
@@ -280,7 +284,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
 
@@ -298,7 +302,7 @@ CONTAINS
 
   INTEGER FUNCTION nc_close(this)
   ! Close the file, freeing all resources
-!    IMPLICIT NONE
+    IMPLICIT NONE
     CLASS(nc_file) :: this
 
     nc_close = nf90_close(this%ncid)
