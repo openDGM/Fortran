@@ -12,7 +12,8 @@ MODULE netcdf_handle
     INTEGER :: ncid
 
   CONTAINS
-! file creation
+
+    ! file creation
     PROCEDURE, PRIVATE :: create_serial => nc_create_serial
 #if defined( parallel )
     PROCEDURE, PRIVATE :: create_par => nc_create_par
@@ -20,15 +21,18 @@ MODULE netcdf_handle
 #else
     GENERIC, PUBLIC :: nc_create => create_serial
 #endif
-! definitions
+
+    ! definitions
     PROCEDURE nc_defdim
     PROCEDURE nc_defvar
     PROCEDURE nc_enddef
-! var access
+
+    ! var access
 #if defined( parallel )
     PROCEDURE nc_var_par_access
 #endif
-! file opening
+
+    ! file opening
     PROCEDURE, PRIVATE :: open_serial => nc_open_serial
 #if defined( parallel )
     PROCEDURE, PRIVATE :: open_par => nc_open_par
@@ -36,14 +40,17 @@ MODULE netcdf_handle
 #else
     GENERIC, PUBLIC :: nc_open => open_serial
 #endif
-! file closing
+
+    ! file closing
     PROCEDURE nc_close
-! variable read
+
+    ! variable read
     PROCEDURE, PRIVATE :: read1D => nc_read1D
     PROCEDURE, PRIVATE :: read2D => nc_read2D
     PROCEDURE, PRIVATE :: read3D => nc_read3D
     GENERIC, PUBLIC :: nc_read => read1D, read2D, read3D
-!variable write
+
+    !variable write
     PROCEDURE, PRIVATE :: write1D => nc_write1D
     PROCEDURE, PRIVATE :: write2D => nc_write2D
     GENERIC,PUBLIC :: nc_write => write1D, write2D
