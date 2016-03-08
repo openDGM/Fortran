@@ -48,19 +48,19 @@ MODULE netcdf_handle
     PROCEDURE, PRIVATE :: write2D => nc_write2D
     GENERIC,PUBLIC :: nc_write => write1D, write2D
 
-!    FINAL :: destructor !requires full Fortran2003 support by compiler
+    FINAL :: destructor !requires full Fortran2003 support by compiler
   END TYPE
 
 CONTAINS
 
-!  SUBROUTINE destructor(this)
-!    ! close open nc files before object gets destroyed
-!    IMPLICIT NONE
-!    TYPE(nc_file) :: this
-!    INTEGER :: nc_stat
-!
-!    nc_stat = nf90_close(this%ncid)
-!  END SUBROUTINE destructor
+  SUBROUTINE destructor(this)
+    ! close open nc files before object gets destroyed
+    IMPLICIT NONE
+    TYPE(nc_file) :: this
+    INTEGER :: nc_stat
+
+    nc_stat = nf90_close(this%ncid)
+  END SUBROUTINE destructor
  
   INTEGER FUNCTION nc_create_serial(this, file_name)
     ! Create new netcdf-file and overwrite in case file already exists
@@ -84,9 +84,8 @@ CONTAINS
     INTEGER, INTENT(in) :: cmode
     INTEGER, INTENT(in) :: mpi_comm
     INTEGER, INTENT(in) :: mpi_info
-    INTEGER :: nc_stat
 
-    nc_stat = nf90_create_par(file_name, cmode, mpi_comm, mpi_info, this%ncid)
+    nc_create_par = nf90_create_par(file_name, cmode, mpi_comm, mpi_info, this%ncid)
     !TODO Handle error
     !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
   END FUNCTION nc_create_par
@@ -101,9 +100,8 @@ CONTAINS
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: dim_name
     INTEGER :: dim_size, dim_id
-    INTEGER :: nc_stat
 
-    nc_stat = nf90_def_dim(this%ncid,dim_name, dim_size, dim_id)
+    nc_defdim = nf90_def_dim(this%ncid,dim_name, dim_size, dim_id)
   END FUNCTION nc_defdim
 
   INTEGER FUNCTION nc_defvar(this, var_name, NCTYPE, dim_ids)
@@ -117,9 +115,8 @@ CONTAINS
     CHARACTER (len = *) :: var_name
     INTEGER :: NCTYPE, var_id
     INTEGER, DIMENSION(:) :: dim_ids
-    INTEGER :: nc_stat
 
-    nc_stat = nf90_def_var(this%ncid, var_name, NCTYPE, dim_ids, var_id)
+    nc_defvar = nf90_def_var(this%ncid, var_name, NCTYPE, dim_ids, var_id)
   END FUNCTION nc_defvar
 
   INTEGER FUNCTION nc_enddef(this)
@@ -127,9 +124,8 @@ CONTAINS
     ! return value: netcdf error code
     IMPLICIT NONE
     CLASS(nc_file) :: this
-    INTEGER :: nc_stat
 
-    nc_stat = nf90_enddef(this%ncid)
+    nc_enddef = nf90_enddef(this%ncid)
   END FUNCTION nc_enddef
 
   INTEGER FUNCTION nc_open_serial(this,file_name)
@@ -139,9 +135,8 @@ CONTAINS
     IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
-    INTEGER :: nc_stat
 
-    nc_stat = nf90_open(file_name, NF90_NOWRITE, this%ncid)
+    nc_open_serial = nf90_open(file_name, NF90_NOWRITE, this%ncid)
   END FUNCTION nc_open_serial
 
 #if defined( parallel )
@@ -155,9 +150,8 @@ CONTAINS
     INTEGER, INTENT(in) :: cmode
     INTEGER, INTENT(in) :: mpi_comm
     INTEGER, INTENT(in) :: mpi_info
-    INTEGER :: nc_stat
 
-    nc_stat = nf90_open_par(file_name, cmode, mpi_comm, &
+    nc_open_par = nf90_open_par(file_name, cmode, mpi_comm, &
               mpi_info, this%ncid)
     !TODO Handle error
     !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
@@ -174,7 +168,7 @@ CONTAINS
     INTEGER :: nc_stat
 
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
-    nc_stat = nf90_var_par_access(this%ncid, var_id, par_access)
+    nc_var_par_access = nf90_var_par_access(this%ncid, var_id, par_access)
     !TODO Handle error
     !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
   END FUNCTION nc_var_par_access
