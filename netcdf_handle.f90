@@ -64,7 +64,7 @@ CONTAINS
     ! Create new netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
 
@@ -76,7 +76,7 @@ CONTAINS
     ! Create new parallel netcdf-file and overwrite in case file already exists
     ! input value: file_name(char*) = name of the file
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
     INTEGER, INTENT(in) :: cmode
@@ -95,7 +95,7 @@ CONTAINS
     ! input values: dim_name(char*) = name of the dimension
     !               dim_size(int) = size of the dimension 
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: dim_name
     INTEGER :: dim_size, dim_id
@@ -110,7 +110,7 @@ CONTAINS
     !               NCTYPE = netcdf-type of the variable (e.g. NF90_INT)
     !               dim_ids (int(:)) = array containing dimension id's bound to newly defined variable
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     INTEGER :: NCTYPE, var_id
@@ -123,7 +123,7 @@ CONTAINS
   INTEGER FUNCTION nc_enddef(this)
     ! End definitions, leave define mode
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     INTEGER, INTENT(out) :: nc_stat
 
@@ -134,7 +134,7 @@ CONTAINS
     ! Open existing netcdf-file in read-only mode
     ! input value: file_name (char*) = name of file to be opened
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
     INTEGER, INTENT(out) :: nc_stat
@@ -147,7 +147,7 @@ CONTAINS
     ! Open existing parallel netcdf-file
     ! input value: file_name (char*) = name of file to be opened
     ! return value: netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: file_name
     INTEGER, INTENT(in) :: cmode
@@ -163,7 +163,7 @@ CONTAINS
   INTEGER FUNCTION nc_var_par_access(this, var_name, par_access)
     ! The function NF90_VAR_PAR_ACCESS changes whether read/write operations 
     ! on a parallel file system are performed collectively (the default) or independently on the variable
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     INTEGER :: var_id
@@ -181,7 +181,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data_out (real(:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow different type and dimension for data
@@ -200,7 +200,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow generic type for data
@@ -219,7 +219,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow generic type for data
@@ -240,7 +240,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data_in (real(:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
     !TODO Figure out some template like way to allow generic type for data
@@ -260,7 +260,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
 
@@ -280,7 +280,7 @@ CONTAINS
     ! input values: var_name (char*) = name of variable
     !               data (real(:,:,:)) = the array containing data of the variable
     !               nc_stat (int) = netcdf error code
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
     CHARACTER (len = *) :: var_name
 
@@ -298,7 +298,7 @@ CONTAINS
 
   INTEGER FUNCTION nc_close(this)
   ! Close the file, freeing all resources
-    IMPLICIT NONE
+!    IMPLICIT NONE
     CLASS(nc_file) :: this
 
     nc_close = nf90_close(this%ncid)
