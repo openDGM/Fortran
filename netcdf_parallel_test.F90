@@ -11,7 +11,7 @@ program f90tst_parallel
   integer, parameter :: NUM_PROC = 4
   integer :: ncid, varid, dimids(MAX_DIMS), chunksizes(MAX_DIMS), chunksizes_in(MAX_DIMS)
   integer :: x_dimid, y_dimid, contig
-  integer :: data_out(NY / 2, NX / 2), data_in(NY / 2, NX / 2)
+  real :: data_out(NY / 2, NX / 2), data_in(NY / 2, NX / 2)
   integer :: mode_flag
   integer :: nvars, ngatts, ndims, unlimdimid, file_format
   integer :: x, y, retval
@@ -39,7 +39,7 @@ program f90tst_parallel
   ! Create some pretend data.
   do x = 1, NX / 2
      do y = 1, NY / 2
-        data_out(y, x) = my_rank
+        data_out(y, x) = real(my_rank)
      end do
   end do
 
