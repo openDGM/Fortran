@@ -62,7 +62,7 @@ program f90tst_parallel
      start = (/ NX / 2 + 1, NY / 2 + 1 /)
   endif
 
-  call nc_test%nc_write('raw_data', data_out, nc_stat, start, count)
+  call nc_test%nc_write('raw_data', data_out, stat, start, count)
   stat = nc_test%nc_close()
 
   call MPI_Finalize(ierr)
