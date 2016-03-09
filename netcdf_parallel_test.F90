@@ -64,4 +64,8 @@ program f90tst_parallel
 
   call nc_test%nc_write('raw_data', data_out, nc_stat, start, count)
   stat = nc_test%nc_close()
+
+  call MPI_Finalize(ierr)
+
+  if (my_rank .eq. 0) print *,'*** SUCCESS!'
 end program f90tst_parallel
