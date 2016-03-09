@@ -18,6 +18,9 @@ program f90tst_parallel
   integer :: p, my_rank, ierr
   integer :: start(MAX_DIMS), count(MAX_DIMS)
 
+  type(nc_file) :: nc_test
+  integer :: stat
+
   call MPI_Init(ierr)
   call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
   call MPI_Comm_size(MPI_COMM_WORLD, p, ierr)
@@ -39,9 +42,6 @@ program f90tst_parallel
         data_out(y, x) = my_rank
      end do
   end do
-
-  type(nc_file) :: nc_test
-  integer :: stat
 
   stat = nc_test%nc_create(FILE_NAME, NF90_HDF5, MPI_COMM_WORLD, MPI_INFO_NULL)
   stat = nc_test%nc_defdim('x',12)
