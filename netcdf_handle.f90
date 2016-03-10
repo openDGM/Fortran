@@ -27,6 +27,16 @@ MODULE netcdf_handle
     PROCEDURE nc_defvar
     PROCEDURE nc_enddef
 
+    ! Attributes
+    PROCEDURE, PRIVATE :: var_put_str_att => nc_var_put_str_att
+    PROCEDURE, PRIVATE :: var_put_int_att => nc_var_put_int_att
+    PROCEDURE, PRIVATE :: var_put_real_att => nc_var_put_real_att
+    PROCEDURE, PRIVATE :: glo_put_str_att => nc_glo_put_str_att
+    PROCEDURE, PRIVATE :: glo_put_int_att => nc_glo_put_int_att
+    PROCEDURE, PRIVATE :: glo_put_real_att => nc_glo_put_real_att
+    GENERIC, PUBLIC :: nc_put_att => var_put_str_att, var_put_int_att, var_put_real_att, &
+                                     glo_put_str_att, glo_put_int_att, glo_put_real_att
+
     ! var access
 #if defined( parallel )
     PROCEDURE nc_var_par_access
@@ -50,7 +60,7 @@ MODULE netcdf_handle
     PROCEDURE, PRIVATE :: read3D => nc_read3D
     GENERIC, PUBLIC :: nc_read => read1D, read2D, read3D
 
-    !variable write
+    ! variable write
     PROCEDURE, PRIVATE :: write1D => nc_write1D
     PROCEDURE, PRIVATE :: write2D => nc_write2D
     GENERIC,PUBLIC :: nc_write => write1D, write2D
@@ -78,6 +88,7 @@ CONTAINS
     CHARACTER (len = *) :: file_name
 
     nc_create_serial = nf90_create(file_name, NF90_CLOBBER, this%ncid)
+    CALL nc_handle_err(nc_create_serial)
   END FUNCTION nc_create_serial
 
 #if defined( parallel )
@@ -93,8 +104,7 @@ CONTAINS
     INTEGER, INTENT(in) :: mpi_info
 
     nc_create_par = nf90_create_par(file_name, cmode, mpi_comm, mpi_info, this%ncid)
-    !TODO Handle error
-    !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+    CALL nc_handle_err(nc_create_par)
   END FUNCTION nc_create_par
 #endif
 
@@ -109,6 +119,7 @@ CONTAINS
     INTEGER :: dim_size, dim_id
 
     nc_defdim = nf90_def_dim(this%ncid,dim_name, dim_size, dim_id)
+    CALL nc_handle_err(nc_defdim)
   END FUNCTION nc_defdim
 
   INTEGER FUNCTION nc_defvar(this, var_name, NCTYPE, dim_ids)
@@ -124,7 +135,104 @@ CONTAINS
     INTEGER, DIMENSION(:) :: dim_ids
 
     nc_defvar = nf90_def_var(this%ncid, var_name, NCTYPE, dim_ids, var_id)
+    CALL nc_handle_err(nc_defvar)
   END FUNCTION nc_defvar
+
+  INTEGER FUNCTION nc_var_put_str_att(this, var_name, att_name, att_value)
+  ! Add an string attribute to a variable
+  ! input values: var_name(char*) = name of the variable
+  !               att_name (char*) = attribute name
+  !               values (char*) = attribute value
+  IMPLICIT NONE
+  CLASS(nc_file) :: this
+  CHARACTER (len = *) :: var_name
+  CHARACTER (len = *) :: att_name
+  CHARACTER (len = *) :: att_value
+  INTEGER :: var_id
+
+  nc_var_put_str_att = nf90_inq_varid(this%ncid, var_name, var_id)
+  CALL nc_handle_err(nc_var_put_str_att)
+  nc_var_put_str_att = nf90_put_att(this%ncid, var_id, att_name, att_value)
+  CALL nc_handle_err(nc_var_put_str_att)
+  END FUNCTION
+
+  INTEGER FUNCTION nc_var_put_int_att(this, var_name, att_name, att_value)
+  ! Add an integer attribute to a variable
+  ! input values: var_name(char*) = name of the variable
+  !               att_name (char*) = attribute name
+  !               values (int) = attribute value
+  IMPLICIT NONE
+  CLASS(nc_file) :: this
+  CHARACTER (len = *) :: var_name
+  CHARACTER (len = *) :: att_name
+  INTEGER,DIMENSION(:) :: att_value
+  INTEGER :: var_id
+
+  nc_var_put_int_att = nf90_inq_varid(this%ncid, var_name, var_id)
+  CALL nc_handle_err(nc_var_put_int_att)
+  nc_var_put_int_att = nf90_put_att(this%ncid, var_id, att_name, att_value)
+  CALL nc_handle_err(nc_var_put_int_att)
+  END FUNCTION
+
+  INTEGER FUNCTION nc_var_put_real_att(this, var_name, att_name, att_value)
+  ! Add a real attribute to a variable
+  ! input values: var_name(char*) = name of the variable
+  !               att_name (char*) = attribute name
+  !               values (real) = attribute value
+  IMPLICIT NONE
+  CLASS(nc_file) :: this
+  CHARACTER (len = *) :: var_name
+  CHARACTER (len = *) :: att_name
+  REAL,DIMENSION(:) :: att_value
+  INTEGER :: var_id
+
+  nc_var_put_real_att = nf90_inq_varid(this%ncid, var_name, var_id)
+  CALL nc_handle_err(nc_var_put_real_att)
+  nc_var_put_real_att = nf90_put_att(this%ncid, var_id, att_name, att_value)
+  CALL nc_handle_err(nc_var_put_real_att)
+  END FUNCTION
+
+  INTEGER FUNCTION nc_glo_put_str_att(this, att_name, att_value)
+  ! Add an string attribute to global
+  ! input values: att_name (char*) = attribute name
+  !               values (char*) = attribute value
+  IMPLICIT NONE
+  CLASS(nc_file) :: this
+  CHARACTER (len = *) :: att_name
+  CHARACTER (len = *) :: att_value
+  INTEGER :: var_id
+
+  nc_glo_put_str_att = nf90_put_att(this%ncid, NF90_GLOBAL, att_name, att_value)
+  CALL nc_handle_err(nc_glo_put_str_att)
+  END FUNCTION
+
+  INTEGER FUNCTION nc_glo_put_int_att(this, att_name, att_value)
+  ! Add an integer attribute to global
+  ! input values: att_name (char*) = attribute name
+  !               values (char*) = attribute value
+  IMPLICIT NONE
+  CLASS(nc_file) :: this
+  CHARACTER (len = *) :: att_name
+  INTEGER, DIMENSION(:) :: att_value
+  INTEGER :: var_id
+
+  nc_glo_put_int_att = nf90_put_att(this%ncid, NF90_GLOBAL, att_name, att_value)
+  CALL nc_handle_err(nc_glo_put_int_att)
+  END FUNCTION
+
+  INTEGER FUNCTION nc_glo_put_real_att(this, att_name, att_value)
+  ! Add a real attribute to global
+  ! input values: att_name (char*) = attribute name
+  !               values (char*) = attribute value
+  IMPLICIT NONE
+  CLASS(nc_file) :: this
+  CHARACTER (len = *) :: att_name
+  REAL, DIMENSION(:) :: att_value
+  INTEGER :: var_id
+
+  nc_glo_put_real_att = nf90_put_att(this%ncid, NF90_GLOBAL, att_name, att_value)
+  CALL nc_handle_err(nc_glo_put_real_att)
+  END FUNCTION
 
   INTEGER FUNCTION nc_enddef(this)
     ! End definitions, leave define mode
@@ -133,6 +241,7 @@ CONTAINS
     CLASS(nc_file) :: this
 
     nc_enddef = nf90_enddef(this%ncid)
+    CALL nc_handle_err(nc_enddef)
   END FUNCTION nc_enddef
 
   INTEGER FUNCTION nc_open_serial(this,file_name)
@@ -144,6 +253,7 @@ CONTAINS
     CHARACTER (len = *) :: file_name
 
     nc_open_serial = nf90_open(file_name, NF90_NOWRITE, this%ncid)
+    CALL nc_handle_err(nc_open_serial)
   END FUNCTION nc_open_serial
 
 #if defined( parallel )
@@ -160,8 +270,7 @@ CONTAINS
 
     nc_open_par = nf90_open_par(file_name, cmode, mpi_comm, &
               mpi_info, this%ncid)
-    !TODO Handle error
-    !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+    CALL nc_handle_err(nc_open_par)
   END FUNCTION nc_open_par
 
   INTEGER FUNCTION nc_var_par_access(this, var_name, par_access)
@@ -175,9 +284,9 @@ CONTAINS
     INTEGER :: nc_stat
 
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_var_par_access = nf90_var_par_access(this%ncid, var_id, par_access)
-    !TODO Handle error
-    !if (nc_stat /= nf90_noerr) call handle_err(nc_stat)
+    CALL nc_handle_err(nc_var_par_access)
   END FUNCTION nc_var_par_access
 #endif
 
@@ -197,7 +306,9 @@ CONTAINS
 
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_stat = nf90_get_var(this%ncid, var_id, data_out, start, count, stride, map)
+    CALL nc_handle_err(nc_stat)
   END SUBROUTINE nc_read1D
 
   SUBROUTINE nc_read2D(this, var_name, data_out, nc_stat, start, count, stride, map)
@@ -216,7 +327,9 @@ CONTAINS
 
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_stat = nf90_get_var(this%ncid, var_id, data_out, start, count, stride, map)
+    CALL nc_handle_err(nc_stat)
   END SUBROUTINE nc_read2D
 
   SUBROUTINE nc_read3D(this, var_name, data_out, nc_stat, start, count, stride, map)
@@ -235,8 +348,9 @@ CONTAINS
 
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_stat = nf90_get_var(this%ncid, var_id, data_out, start, count, stride, map)
-
+    CALL nc_handle_err(nc_stat)
   END SUBROUTINE nc_read3D
 
 
@@ -254,10 +368,11 @@ CONTAINS
     INTEGER :: var_id
     INTEGER, OPTIONAL, DIMENSION(:) :: start, count, stride, map
 
-
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_stat = nf90_put_var(this%ncid, var_id, data_in, start, count, stride, map)
+    CALL nc_handle_err(nc_stat)
   END SUBROUTINE nc_write1D
 
   SUBROUTINE nc_write2D(this, var_name, data_in, nc_stat, start, count, stride, map)
@@ -277,7 +392,9 @@ CONTAINS
 
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_stat = nf90_put_var(this%ncid, var_id, data_in, start, count, stride, map)
+    CALL nc_handle_err(nc_stat)
   END SUBROUTINE nc_write2D
 
   SUBROUTINE nc_write3D(this, var_name, data_in, nc_stat, start, count, stride, map)
@@ -297,7 +414,9 @@ CONTAINS
 
     ! Get the varid of the data variable, based on its name.
     nc_stat = nf90_inq_varid(this%ncid, var_name, var_id)
+    CALL nc_handle_err(nc_stat)
     nc_stat = nf90_put_var(this%ncid, var_id, data_in, start, count, stride, map)
+    CALL nc_handle_err(nc_stat)
   END SUBROUTINE nc_write3D
 
 
@@ -307,6 +426,18 @@ CONTAINS
     CLASS(nc_file) :: this
 
     nc_close = nf90_close(this%ncid)
+    CALL nc_handle_err(nc_close)
   END FUNCTION nc_close
+
+  SUBROUTINE nc_handle_err(errcode)
+  ! Output netcdf error message
+  IMPLICIT NONE
+    INTEGER, INTENT(in) :: errcode
+    
+    IF(errcode /= nf90_noerr) THEN
+       PRINT *, 'Error: ', TRIM(nf90_strerror(errcode))
+       STOP 2
+    ENDIF
+  END SUBROUTINE nc_handle_err
 
 END MODULE netcdf_handle
