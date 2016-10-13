@@ -44,8 +44,14 @@ program rma_recycle
  
   call init
   call recycle
-  call finalize
 
+
+  if(my_rank==0) then
+    write(*,*) u(:,:,nxlg)
+  end if
+
+  call finalize
+ 
   contains
 
   subroutine init
@@ -68,7 +74,7 @@ program rma_recycle
     call MPI_TYPE_VECTOR(1,4,6,MPI_INT,column_type,ierr)
     call MPI_TYPE_COMMIT(column_type,ierr)
 
-    call MPI_TYPE_VECTOR(4,1,6,MPI_INT,row_type,ierr)
+    call MPI_TYPE_VECTOR(4,1,32,MPI_INT,row_type,ierr)
     call MPI_TYPE_COMMIT(row_type,ierr)
 
 !-- Create array bounds for local arrays on PE. Arrays are size 32x6x6 with 32x4x4 of data and 1 ghost layer in x and y.
@@ -151,15 +157,13 @@ program rma_recycle
 
     REAL, DIMENSION (16,4)  ::  y_1d_pr=0, y_1d_pr_filter  !< auxiliary variable to calculate avpr, An array that contains cross section profiles in single PE.
 
-    if ( coords(2) == 1 ) then
+    if ( coords(2) /= 0 ) then
        i = nxl
     else
        i = nxlg
     end if
 
-    IF ( coords(2) == 1 )  THEN
-       win_size = 4*(nbgp*nz*ny -2*nbgp)
-    END IF
+    win_size = 4*(nbgp*nz*ny -2*nbgp)
 
     CALL MPI_WIN_CREATE(u(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_get(0), ierr)
     CALL MPI_WIN_CREATE(v(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_get(1), ierr)
@@ -209,72 +213,73 @@ program rma_recycle
     loop_index = my_rank ! indicates row index in the global grid
     lvl_index = 1 ! indicates row index in array with horizontal 1D data
 
-    DO WHILE (loop_index < nz*nbgp*2) ! number of rows is number of vertical rows nz * thickness of the ghost layer at inflow * number of vars that are recycled (2 in this case U,V)
+    do while (loop_index < nz*nbgp*2) ! number of rows is number of vertical rows nz * thickness of the ghost layer at inflow * number of vars that are recycled (2 in this case U,V)
 
        var_index = loop_index/(nz*nbgp) ! variable index u=0, v=1
        gp_index  = loop_index/(nz*(var_index+1)) ! indicate index of ghost point 0,1,2
-       start_index = mod(loop_index,nz) + gp_index*ny*nz ! memory shift to start index of y-dimension row TODO check this is correct
+       start_index = mod(loop_index,nz) + gp_index*nz ! memory shift to start index of y-dimension row TODO check this is correct
 
-       DO j = 0,dims(2)-1
-          CALL MPI_CART_RANK(comm2d, (/j,1/), id_of_pe, ierr)
-          CALL MPI_GET(y_1d_pr(j*(ny-2)+1,lvl_index), ny-2, MPI_REAL, id_of_pe, start_index, 1, row_type, win_get(var_index), ierr)
-       END DO
+       do j = 0,dims(2)-1
+          call MPI_CART_RANK(comm2d, (/j,1/), id_of_pe, ierr)
+          call MPI_GET(y_1d_pr(j*(ny-2)+1,lvl_index), ny-2, MPI_REAL, id_of_pe, start_index, 1, row_type, win_get(var_index), ierr)
+       end do
 
        loop_index = loop_index + nprocs
        lvl_index = lvl_index+1
-    END DO
+    end do
 
-    DO k = 0,1
-       CALL MPI_WIN_FENCE(0, win_get(k), ierr)
-    END DO
+    do k = 0,1
+       call MPI_WIN_FENCE(0, win_get(k), ierr)
+    end do
 
-    DO k = 0,1
-      CALL MPI_WIN_FREE(win_get(k), ierr)
-    END DO
+    do k = 0,1
+      call MPI_WIN_FREE(win_get(k), ierr)
+    end do
+
 
     ! output to see if values are correctly transferred from recycling plane to 1D-filter arrays
-    write(*,*) "Rank: ", my_rank, " Array: ", y_1d_pr
+    write(*,*) "before: ", "Rank: ", my_rank, " Array: ", y_1d_pr
 
-    !TODO 
     ! - 1D-filter operation
-    CALL filter1d(y_1d_pr)
+    call filter1d(y_1d_pr)
     ! - put filtered data back into ghost layer of inflow plane (like above with replacing get by put)
 
     ! output to see if values are correctly transferred from recycling plane to 1D-filter arrays
-    write(*,*) "Rank: ", my_rank, " Array: ", y_1d_pr
+    write(*,*) "after: ", "Rank: ", my_rank, " Array: ", y_1d_pr
 
-    CALL MPI_WIN_CREATE(u(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_put(0), ierr)
-    CALL MPI_WIN_CREATE(v(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_put(1), ierr)
 
-    DO k = 0,1
-       CALL MPI_WIN_FENCE(0, win_put(k), ierr)
-    END DO
+    call MPI_WIN_CREATE(u(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_put(0), ierr)
+    call MPI_WIN_CREATE(v(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_put(1), ierr)
+
+    do k = 0,1
+       call MPI_WIN_FENCE(0, win_put(k), ierr)
+    end do
 
     loop_index = my_rank ! indicates row index in the global grid
     lvl_index = 1 ! indicates row index in array with horizontal 1D data
 
-    DO WHILE (loop_index < nz*nbgp*2) ! number of rows is number of vertical rows nz * thickness of the ghost layer at inflow * number of vars that are recycled (2 in this case U,V)
+    do while (loop_index < nz*nbgp*2) ! number of rows is number of vertical rows nz * thickness of the ghost layer at inflow * number of vars that are recycled (2 in this case U,V)
 
        var_index = loop_index/(nz*nbgp) ! variable index u=0, v=1
        gp_index  = loop_index/(nz*(var_index+1)) ! indicate index of ghost point 0,1,2
-       start_index = mod(loop_index,nz) + gp_index*ny*nz ! memory shift to start index of y-dimension row TODO check this is correct
+       start_index = mod(loop_index,nz) + gp_index*nz ! memory shift to start index of y-dimension row TODO check this is correct
 
-       DO j = 0,dims(2)-1
-          CALL MPI_CART_RANK(comm2d, (/j,1/), id_of_pe, ierr)
-          CALL MPI_PUT(y_1d_pr(j*(ny-2)+1,lvl_index), ny-2, MPI_REAL, id_of_pe, start_index, 1, row_type, win_put(var_index), ierr)
-       END DO
+       do j = 0,dims(2)-1
+          call MPI_CART_RANK(comm2d, (/j,0/), id_of_pe, ierr)
+          call MPI_PUT(y_1d_pr(j*(ny-2)+1,lvl_index), ny-2, MPI_REAL, id_of_pe, start_index, 1, row_type, win_put(var_index), ierr)
+       end do
 
        loop_index = loop_index + nprocs
        lvl_index = lvl_index+1
-    END DO
+    end do
 
-    DO k = 0,1
-       CALL MPI_WIN_FENCE(0, win_put(k), ierr)
-    END DO
+    do k = 0,1
+       call MPI_WIN_FENCE(0, win_put(k), ierr)
+    end do
 
-    DO k = 0,1
-      CALL MPI_WIN_FREE(win_put(k), ierr)
-    END DO
+    do k = 0,1
+      call MPI_WIN_FREE(win_put(k), ierr)
+    end do
 
   end subroutine recycle
 
