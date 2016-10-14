@@ -45,7 +45,7 @@ program rma_recycle
   call init
   call recycle
 
-
+!-- Print out the filtered (i.e. spanwise averageed) that has been copied to the inflow ghoast layer.
   if(my_rank==0) then
     write(*,*) u(:,:,nxlg)
   end if
@@ -71,7 +71,7 @@ program rma_recycle
     call MPI_Cart_Coords(comm2d, my_rank, 2, coords, ierr)
 
 !-- Declare MPI-User Types to communicate rows and columns of 3D arrays. A user type for the third dimension (x) is missing. 
-    call MPI_TYPE_VECTOR(1,4,6,MPI_INT,column_type,ierr)
+    call MPI_TYPE_VECTOR(1,32,32,MPI_INT,column_type,ierr)
     call MPI_TYPE_COMMIT(column_type,ierr)
 
     call MPI_TYPE_VECTOR(4,1,32,MPI_INT,row_type,ierr)
@@ -92,7 +92,6 @@ program rma_recycle
     nzt  = 32
 
     allocate(u(nzb:nzt,nysg:nyng,nxlg:nxrg), v(nzb:nzt,nysg:nyng,nxlg:nxrg))
-    write(*,*) "Rank: ", my_rank, " Size: ", size(u), (/nxlg,nxrg,nysg,nyng/)
 
 !-- Initialize u and v data with PE rank.
     u(:,nys:nyn,nxl:nxr) = my_rank;
@@ -146,8 +145,8 @@ program rma_recycle
     use filter
 
     implicit none
-    INTEGER (KIND=MPI_ADDRESS_KIND)   :: win_size = 0      !< window size
-    INTEGER, DIMENSION(0:1)           :: win_get, win_put  !< MPI communication windows
+    integer (kind=MPI_ADDRESS_KIND)   :: win_size = 0      !< window size
+    integer, dimension(0:1)           :: win_get, win_put  !< MPI communication windows
 
     integer  ::  id_of_pe
     integer  ::  nz=32,ny=6,nbgp=1,nprocs=16
@@ -155,7 +154,7 @@ program rma_recycle
     integer (kind=MPI_ADDRESS_KIND) :: start_index
     integer  ::  i,j,k
 
-    REAL, DIMENSION (16,4)  ::  y_1d_pr=0, y_1d_pr_filter  !< auxiliary variable to calculate avpr, An array that contains cross section profiles in single PE.
+    real, dimension (16,4)  ::  y_1d_pr=0  !< auxiliary variable to calculate avpr, An array that contains cross section profiles in single PE.
 
     if ( coords(2) /= 0 ) then
        i = nxl
@@ -165,12 +164,12 @@ program rma_recycle
 
     win_size = 4*(nbgp*nz*ny -2*nbgp)
 
-    CALL MPI_WIN_CREATE(u(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_get(0), ierr)
-    CALL MPI_WIN_CREATE(v(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_get(1), ierr)
+    call MPI_WIN_CREATE(u(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_get(0), ierr)
+    call MPI_WIN_CREATE(v(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_get(1), ierr)
 
-    DO k = 0,1
-       CALL MPI_WIN_FENCE(0, win_get(k), ierr)
-    END DO
+    do k = 0,1
+       call MPI_WIN_FENCE(0, win_get(k), ierr)
+    end do
 
 !   Vertical slice at the recycling plane is distributed row-wise to all PEs to be contiguous in memory in cross-wind direction
 !   Data is distributed not only over the PEs in the vertical slice but over all PEs in order to avoid idle processes while 
@@ -236,17 +235,9 @@ program rma_recycle
       call MPI_WIN_FREE(win_get(k), ierr)
     end do
 
-
-    ! output to see if values are correctly transferred from recycling plane to 1D-filter arrays
-    write(*,*) "before: ", "Rank: ", my_rank, " Array: ", y_1d_pr
-
-    ! - 1D-filter operation
+    ! 1D-filter operation
     call filter1d(y_1d_pr)
-    ! - put filtered data back into ghost layer of inflow plane (like above with replacing get by put)
-
-    ! output to see if values are correctly transferred from recycling plane to 1D-filter arrays
-    write(*,*) "after: ", "Rank: ", my_rank, " Array: ", y_1d_pr
-
+    ! put filtered data back into ghost layer of inflow plane (like above with replacing get by put)
 
     call MPI_WIN_CREATE(u(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_put(0), ierr)
     call MPI_WIN_CREATE(v(nzb,nys,i), win_size, 4, MPI_INFO_NULL, comm2d, win_put(1), ierr)
