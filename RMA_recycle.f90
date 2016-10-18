@@ -215,8 +215,8 @@ program rma_recycle
     do while (loop_index < nz*nbgp*2) ! number of rows is number of vertical rows nz * thickness of the ghost layer at inflow * number of vars that are recycled (2 in this case U,V)
 
        var_index = loop_index/(nz*nbgp) ! variable index u=0, v=1
-       gp_index  = loop_index/(nz*(var_index+1)) ! indicate index of ghost point 0,1,2
-       start_index = mod(loop_index,nz) + gp_index*nz ! memory shift to start index of y-dimension row TODO check this is correct
+       gp_index  = loop_index/nz-var_index*nbgp ! indicate index of ghost point 0,1,2
+       start_index = mod(loop_index,nz) + gp_index*nz*ny ! memory shift to start index of y-dimension row
 
        do j = 0,dims(2)-1
           call MPI_CART_RANK(comm2d, (/j,1/), id_of_pe, ierr)
@@ -252,8 +252,8 @@ program rma_recycle
     do while (loop_index < nz*nbgp*2) ! number of rows is number of vertical rows nz * thickness of the ghost layer at inflow * number of vars that are recycled (2 in this case U,V)
 
        var_index = loop_index/(nz*nbgp) ! variable index u=0, v=1
-       gp_index  = loop_index/(nz*(var_index+1)) ! indicate index of ghost point 0,1,2
-       start_index = mod(loop_index,nz) + gp_index*nz ! memory shift to start index of y-dimension row TODO check this is correct
+       gp_index  = loop_index/nz-var_index*nbgp ! indicate index of ghost point 0,1,2
+       start_index = mod(loop_index,nz) + gp_index*nz*ny ! memory shift to start index of y-dimension row 
 
        do j = 0,dims(2)-1
           call MPI_CART_RANK(comm2d, (/j,0/), id_of_pe, ierr)
